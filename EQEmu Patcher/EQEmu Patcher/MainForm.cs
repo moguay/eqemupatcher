@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Net;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -22,10 +25,10 @@ namespace EQEmu_Patcher
          *  EDIT THESE VARIABLES FOR EACH SERVER
          * 
          ****/
-        public static string serverName = "Rebuild EQ";
-        public static string filelistUrl = "https://patch.clumsysworld.com/";
+        public static string serverName = "EQ ProFusion";
+        public static string filelistUrl = "https://eqprofusion.com/patch/";
         public static bool defaultAutoPlay = false; //When a user runs this first time, what should Autoplay be set to?
-        public static bool defaultAutoPatch = false; //When a user runs this first time, what should Autopatch be set to?
+        public static bool defaultAutoPatch = true; //When a user runs this first time, what should Autopatch be set to?
 
         //Note that for supported versions, the 3 letter suffix is needed on the filelist_###.yml file.
         public static List<VersionTypes> supportedClients = new List<VersionTypes> { //Supported clients for patcher
@@ -61,7 +64,10 @@ namespace EQEmu_Patcher
             }
 
             isLoading = true;
+
             txtList.Visible = false;
+            chkLogPatch.Checked = false;
+
             splashLogo.Visible = true;
             if (this.Width < 432) {
                 this.Width = 432;
@@ -117,6 +123,8 @@ namespace EQEmu_Patcher
             }
 
             txtList.Visible = false;
+            chkLogPatch.Checked = false;
+
             splashLogo.Visible = true;
             FileList filelist;            
 
@@ -407,6 +415,20 @@ namespace EQEmu_Patcher
         }
 
         bool isPatching = false;
+        bool isDone = false;
+        bool isPatchForce = false;
+        bool isAsync = true;
+        bool isAsyncDone = true;
+
+        FileList filelist;
+        List<FileEntry> filesToDownload = new List<FileEntry>();
+
+        public static WebClient webClient;               // Our WebClient that will be doing the downloading for us
+        public static Stopwatch sw = new Stopwatch();    // The stopwatch which we will be using to calculate the download speed
+
+        long curBytes = 0;
+        long reciveBytes = 0;
+        long totalBytes = 0;
 
         public object Keyboard { get; private set; }
 
@@ -414,43 +436,22 @@ namespace EQEmu_Patcher
         {
             if (isPatching)
             {
+                if (isAsync) { cancelDownload(); }
                 btnCheck.Text = "Patch";
                 isPatching = false;
+                isDone = false;
                 return;
+            }
+            if (isDone)
+            {
+                btnCheck.Text = "Patch";
+                isPatching = false;
+                isDone = false;
+                isPatchForce = true;
             }
 
             StartPatch();
         }        
-
-        private string DownloadFile(string url, string path)
-        {
-
-            path = path.Replace("/", "\\");
-            if (path.Contains("\\")) { //Make directory if needed.
-                
-                string dir = Application.StartupPath + "\\" + path.Substring(0, path.LastIndexOf("\\"));
-                Directory.CreateDirectory(dir);
-            }
-
-            //Console.WriteLine(Application.StartupPath + "\\" + path);
-            LogEvent(path + "...");
-            string reason = UtilityLibrary.DownloadFile(url, path);
-            if (reason != "")
-            {
-                if (reason == "404")
-                {
-                    LogEvent("Failed to download " + url + ", 404 error (website may be down?)");
-                    //MessageBox.Show("Patch server could not be found. (404)");
-                }
-                else
-                {
-                    LogEvent("Failed to download " + url + " for untracked reason: " + reason);
-                    //MessageBox.Show("Patch server failed: (" + reason + ")");
-                }
-                return reason;
-            }
-            return "";
-        }
 
         private void StartPatch()
         {
@@ -459,7 +460,6 @@ namespace EQEmu_Patcher
             btnCheck.Text = "Cancel";
 
             txtList.Text = "Patching...";
-            FileList filelist;
 
             using (var input = File.OpenText("filelist.yml"))
             {
@@ -469,14 +469,13 @@ namespace EQEmu_Patcher
 
                 filelist = deserializer.Deserialize<FileList>(input);
             }
-            int totalBytes = 0;
-            List<FileEntry> filesToDownload = new List<FileEntry>();
+
             foreach (var entry in filelist.downloads)
             {
                 Application.DoEvents();
                 var path = entry.name.Replace("/", "\\");
                 //See if file exists.
-                if (!File.Exists(path))
+                if (!File.Exists(path) || isPatchForce)
                 {
                     //Console.WriteLine("Downloading: "+ entry.name);
                     filesToDownload.Add(entry);
@@ -528,33 +527,193 @@ namespace EQEmu_Patcher
                 IniLibrary.instance.LastPatchedVersion = filelist.version;
                 IniLibrary.Save();
                 btnCheck.BackColor = SystemColors.Control;
-                btnCheck.Text = "Patch";
+                btnCheck.Text = "Force Full Download";
+                isPatching = false;
+                isDone = true;
+                isPatchForce = false;
                 return;
             }
 
             LogEvent("Downloading " + totalBytes + " bytes for " + filesToDownload.Count + " files...");
-            int curBytes = 0;
-            progressBar.Maximum = totalBytes;
-            progressBar.Value = 0;
-            foreach (var entry in filesToDownload)
+            curBytes = 0;
+
+            if (!isAsync)
             {
-                progressBar.Value = (curBytes > totalBytes) ? totalBytes : curBytes;
-                string url = filelist.downloadprefix + entry.name.Replace("\\", "/");
-                DownloadFile(url, entry.name);
-                curBytes += entry.size;
-                Application.DoEvents();
-                if (!isPatching)
+                //progressBar.Maximum = totalBytes;
+                progressBar.Maximum = 100;
+                progressBar.Value = 0;
+                foreach (var entry in filesToDownload)
                 {
-                    LogEvent("Patching cancelled.");
-                    return;
+                    //progressBar.Value = (curBytes > totalBytes) ? totalBytes : curBytes;
+                    progressBar.Value = (curBytes > totalBytes) ? 100 : (int)((100d / totalBytes) * (curBytes)); ;
+                    string url = filelist.downloadprefix + entry.name.Replace("\\", "/");
+                    DownloadFile(url, entry.name);
+                    curBytes += entry.size;
+                    Application.DoEvents();
+                    if (!isPatching)
+                    {
+                        LogEvent("Patching cancelled.");
+                        return;
+                    }
+                }
+                progressBar.Value = progressBar.Maximum;
+                LogEvent("Complete! Press Play to begin.");
+                IniLibrary.instance.LastPatchedVersion = filelist.version;
+                IniLibrary.Save();
+                btnCheck.BackColor = SystemColors.Control;
+                btnCheck.Text = "Force Full Download";
+                labelPerc.Text = "Done";
+                isPatching = false;
+                isDone = true;
+                isPatchForce = false;
+            }
+            else
+            {
+                progressBar.Maximum = 100;
+                progressBar.Value = 0;
+                string path;
+
+                foreach (var entry in filesToDownload)
+                {
+                    isAsyncDone = false;
+                    path = entry.name.Replace("/", "\\");
+                    string url = filelist.downloadprefix + path;
+
+                    LogEvent(path + "...");
+
+                    DownloadFileUrl(url, entry.name);
+
+                    Application.DoEvents();
+                    if (!isPatching)
+                    {
+                        LogEvent("Patching cancelled.");
+                        return;
+                    }
+
+                    while (!isAsyncDone)
+                    {
+                        Application.DoEvents();
+                    }
                 }
             }
-            progressBar.Value = progressBar.Maximum;
-            LogEvent("Complete! Press Play to begin.");
-            IniLibrary.instance.LastPatchedVersion = filelist.version;
-            IniLibrary.Save();
-            btnCheck.BackColor = SystemColors.Control;
-            btnCheck.Text = "Patch";
+        }
+
+        private string DownloadFile(string url, string path)
+        {
+
+            path = path.Replace("/", "\\");
+            if (path.Contains("\\"))
+            { //Make directory if needed.
+
+                string dir = Application.StartupPath + "\\" + path.Substring(0, path.LastIndexOf("\\"));
+                Directory.CreateDirectory(dir);
+            }
+
+            //Console.WriteLine(Application.StartupPath + "\\" + path);
+            LogEvent(path + "...");
+            string reason = UtilityLibrary.DownloadFile(url, path);
+            if (reason != "")
+            {
+                if (reason == "404")
+                {
+                    LogEvent("Failed to download " + url + ", 404 error (website may be down?)");
+                    //MessageBox.Show("Patch server could not be found. (404)");
+                }
+                else
+                {
+                    LogEvent("Failed to download " + url + " for untracked reason: " + reason);
+                    //MessageBox.Show("Patch server failed: (" + reason + ")");
+                }
+                return reason;
+            }
+            return "";
+        }
+
+        public void DownloadFileUrl(string urlAddress, string location)
+        {
+            using (webClient = new WebClient())
+            {
+                webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(Completed);
+                webClient.DownloadProgressChanged += new DownloadProgressChangedEventHandler(ProgressChanged);
+
+                // The variable that will be holding the url address (making sure it starts with http://)
+                Uri URL = urlAddress.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ? new Uri(urlAddress) : new Uri("http://" + urlAddress);
+
+                // Start the stopwatch which we will be using to calculate the download speed
+                sw.Start();
+
+                try
+                {
+                    // Start downloading the file
+                    webClient.DownloadFileAsync(URL, location);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+        }
+
+        // The event that will fire whenever the progress of the WebClient is changed
+        private void ProgressChanged(object sender, DownloadProgressChangedEventArgs e)
+        {
+            reciveBytes = e.BytesReceived;
+
+            // Calculate download speed and output it to labelSpeed.
+            labelSpeed.Text = string.Format("{0} kb/s", ((double)(curBytes + reciveBytes) / 1024d / sw.Elapsed.TotalSeconds).ToString("0.00"));
+
+            // Update the progressbar percentage only when the value is not the same.
+            //curBytes += entry.size
+
+            //progressBar.Value = e.ProgressPercentage;
+            progressBar.Value = (int)((100d / totalBytes) * (curBytes + reciveBytes));
+
+            // Show the percentage on our label.
+            labelPerc.Text = e.ProgressPercentage.ToString() + "%";
+
+            // Update the label with how much data have been downloaded so far and the total size of the file we are currently downloading
+            labelDownloaded.Text = string.Format("{0} / {1} MB",
+                ((curBytes + reciveBytes) / 1024d / 1024d).ToString("0.00"),
+                //(e.TotalBytesToReceive / 1024d / 1024d).ToString("0.00"));
+                (totalBytes / 1024d / 1024d).ToString("0.00"));
+        }
+
+        // The event that will trigger when the WebClient is completed
+        private void Completed(object sender, AsyncCompletedEventArgs e)
+        {
+            // Reset the stopwatch.
+            sw.Reset();
+
+            if (e.Cancelled == true)
+            {
+                //MessageBox.Show("Download has been canceled.");
+                LogEvent("Patching cancelled.");
+            }
+            else
+            {
+                isAsyncDone = true;
+                curBytes = curBytes + reciveBytes;
+                // MessageBox.Show("Download completed!");
+            }
+
+            if (totalBytes == curBytes)
+            {
+                progressBar.Value = progressBar.Maximum;
+                LogEvent("Complete! Press Play to begin.");
+                IniLibrary.instance.LastPatchedVersion = filelist.version;
+                IniLibrary.Save();
+                btnCheck.BackColor = SystemColors.Control;
+                btnCheck.Text = "Force Full Download";
+                labelPerc.Text = "Done";
+                isPatching = false;
+                isDone = true;
+                isPatchForce = false;
+            }
+        }
+
+        private void cancelDownload()
+        {
+            webClient.CancelAsync();
         }
 
         private void LogEvent(string text)
@@ -562,6 +721,8 @@ namespace EQEmu_Patcher
             if (!txtList.Visible)
             {
                 txtList.Visible = true;
+                chkLogPatch.Checked = true;
+
                 splashLogo.Visible = false;
             }
             Console.WriteLine(text);
@@ -590,6 +751,19 @@ namespace EQEmu_Patcher
                 btnCheck.BackColor = SystemColors.Control;
                 StartPatch();
             }
+        }
+
+        private void chkAsyncPatch_CheckedChanged(object sender, EventArgs e)
+        {
+            if (isPatching) return;
+            isAsync = (chkAsyncPatch.Checked) ? true : false;
+            //IniLibrary.Save();
+        }
+
+        private void chkLogPatch_CheckedChanged(object sender, EventArgs e)
+        {
+            //if (isLoading) return;
+            txtList.Visible = (chkLogPatch.Checked) ? true : false;
         }
     }
     public class FileList

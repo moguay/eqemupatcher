@@ -133,4 +133,7 @@
   <data name="brokenmirror" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\brokenmirror.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="d2p6dw3_9d08ddc6_d072_4605_9386_6ac12b2178cb" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\d2p6dw3-9d08ddc6-d072-4605-9386-6ac12b2178cb.jpg;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
 </root>

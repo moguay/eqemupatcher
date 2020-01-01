@@ -19,7 +19,7 @@ namespace EQEmu_Patcher.Properties {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -66,6 +66,16 @@ namespace EQEmu_Patcher.Properties {
         internal static System.Drawing.Bitmap brokenmirror {
             get {
                 object obj = ResourceManager.GetObject("brokenmirror", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap d2p6dw3_9d08ddc6_d072_4605_9386_6ac12b2178cb {
+            get {
+                object obj = ResourceManager.GetObject("d2p6dw3_9d08ddc6_d072_4605_9386_6ac12b2178cb", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
