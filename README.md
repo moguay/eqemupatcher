@@ -2,7 +2,7 @@
 
 EQEmu File Comparison and Patcher
 
-![alt tag](http://i.imgur.com/FSVgkzh.png)
+![alt tag](https://i.imgur.com/ol4hUze.png)
 ---
 It is REQUIRED as a server administrator to compile eqemupatcher.exe yourself to configure it properly.
 * eqemupatcher.exe is the client side patcher. Read Client Setup for more information on how to use it.

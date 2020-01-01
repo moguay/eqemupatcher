@@ -14,6 +14,7 @@ namespace EQEmu_Patcher
         public static IniLibrary instance;
         public string AutoPatch { get; set; }
         public string AutoPlay { get; set; }
+        public string Async { get; set; }
         public VersionTypes ClientVersion { get; set; }
         public string LastPatchedVersion { get; set; }
 
@@ -55,6 +56,7 @@ namespace EQEmu_Patcher
             instance = new IniLibrary();
             instance.AutoPatch = (MainForm.defaultAutoPatch) ? "true":  "false";
             instance.AutoPlay = (MainForm.defaultAutoPlay) ? "true" : "false";
+            instance.Async = (MainForm.defaultAsync) ? "true" : "false";
         }
     }
 }

@@ -29,6 +29,7 @@ namespace EQEmu_Patcher
         public static string filelistUrl = "https://eqprofusion.com/patch/";
         public static bool defaultAutoPlay = false; //When a user runs this first time, what should Autoplay be set to?
         public static bool defaultAutoPatch = true; //When a user runs this first time, what should Autopatch be set to?
+        public static bool defaultAsync = true; //When a user runs this first time, what should Async Download be set to?
 
         //Note that for supported versions, the 3 letter suffix is needed on the filelist_###.yml file.
         public static List<VersionTypes> supportedClients = new List<VersionTypes> { //Supported clients for patcher
@@ -147,6 +148,8 @@ namespace EQEmu_Patcher
             }
             chkAutoPlay.Checked = (IniLibrary.instance.AutoPlay == "true");
             chkAutoPatch.Checked = (IniLibrary.instance.AutoPatch == "true");
+            chkAsyncPatch.Checked = (IniLibrary.instance.Async == "true");
+
             isLoading = false;
             if (File.Exists("eqemupatcher.png"))
             {
@@ -528,6 +531,7 @@ namespace EQEmu_Patcher
                 IniLibrary.Save();
                 btnCheck.BackColor = SystemColors.Control;
                 btnCheck.Text = "Force Full Download";
+                labelPerc.Text = "Done";
                 isPatching = false;
                 isDone = true;
                 isPatchForce = false;
@@ -755,9 +759,10 @@ namespace EQEmu_Patcher
 
         private void chkAsyncPatch_CheckedChanged(object sender, EventArgs e)
         {
-            if (isPatching) return;
+            if (isLoading) return;
             isAsync = (chkAsyncPatch.Checked) ? true : false;
-            //IniLibrary.Save();
+            IniLibrary.instance.Async = (chkAsyncPatch.Checked) ? "true" : "false";
+            IniLibrary.Save();
         }
 
         private void chkLogPatch_CheckedChanged(object sender, EventArgs e)

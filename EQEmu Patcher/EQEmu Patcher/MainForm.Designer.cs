@@ -96,6 +96,7 @@
             this.chkAutoPlay.AutoSize = true;
             this.chkAutoPlay.BackColor = System.Drawing.Color.Transparent;
             this.chkAutoPlay.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.chkAutoPlay.ForeColor = System.Drawing.SystemColors.ControlText;
             this.chkAutoPlay.Location = new System.Drawing.Point(236, 402);
             this.chkAutoPlay.Name = "chkAutoPlay";
             this.chkAutoPlay.Size = new System.Drawing.Size(80, 17);
@@ -111,6 +112,7 @@
             this.chkAutoPatch.AutoSize = true;
             this.chkAutoPatch.BackColor = System.Drawing.Color.Transparent;
             this.chkAutoPatch.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.chkAutoPatch.ForeColor = System.Drawing.SystemColors.ControlText;
             this.chkAutoPatch.Location = new System.Drawing.Point(111, 402);
             this.chkAutoPatch.Name = "chkAutoPatch";
             this.chkAutoPatch.Size = new System.Drawing.Size(89, 17);
@@ -127,6 +129,7 @@
             this.chkAsyncPatch.Checked = true;
             this.chkAsyncPatch.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkAsyncPatch.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.chkAsyncPatch.ForeColor = System.Drawing.SystemColors.ControlText;
             this.chkAsyncPatch.Location = new System.Drawing.Point(111, 421);
             this.chkAsyncPatch.Name = "chkAsyncPatch";
             this.chkAsyncPatch.Size = new System.Drawing.Size(120, 17);
@@ -141,6 +144,7 @@
             this.chkLogPatch.AutoSize = true;
             this.chkLogPatch.BackColor = System.Drawing.Color.Transparent;
             this.chkLogPatch.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.chkLogPatch.ForeColor = System.Drawing.SystemColors.ControlText;
             this.chkLogPatch.Location = new System.Drawing.Point(111, 439);
             this.chkLogPatch.Name = "chkLogPatch";
             this.chkLogPatch.Size = new System.Drawing.Size(47, 17);
