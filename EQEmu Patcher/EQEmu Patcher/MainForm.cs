@@ -26,7 +26,7 @@ namespace EQEmu_Patcher
          * 
          ****/
         public static string serverName = "EQ ProFusion";
-        public static string filelistUrl = "https://eqprofusion.com/patch/";
+        public static string filelistUrl = "http://patch.eqprofusion.com.s3.fr-par.scw.cloud/";
         public static bool defaultAutoPlay = false; //When a user runs this first time, what should Autoplay be set to?
         public static bool defaultAutoPatch = true; //When a user runs this first time, what should Autopatch be set to?
         public static bool defaultAsync = true; //When a user runs this first time, what should Async Download be set to?
@@ -418,6 +418,8 @@ namespace EQEmu_Patcher
         }
 
         bool isPatching = false;
+        bool isCancelled = false;
+        bool isError = false;
         bool isDone = false;
         bool isPatchForce = false;
         bool isAsync = true;
@@ -458,6 +460,14 @@ namespace EQEmu_Patcher
 
         private void StartPatch()
         {
+
+            Process[] pname = Process.GetProcessesByName("eqgame");
+            if (pname.Length != 0)
+            {
+                MessageBox.Show("Everquest is running, please close it.");
+                return;
+            }
+
             if (isPatching) return;
             isPatching = true;
             btnCheck.Text = "Cancel";
@@ -587,18 +597,23 @@ namespace EQEmu_Patcher
 
                     DownloadFileUrl(url, entry.name);
 
-                    Application.DoEvents();
-                    if (!isPatching)
-                    {
-                        LogEvent("Patching cancelled.");
-                        return;
-                    }
-
                     while (!isAsyncDone)
                     {
                         Application.DoEvents();
+                        if (isCancelled || isError) return;
                     }
                 }
+
+                    //progressBar.Value = progressBar.Maximum;
+                    LogEvent("Complete! Press Play to begin.");
+                    IniLibrary.instance.LastPatchedVersion = filelist.version;
+                    IniLibrary.Save();
+                    btnCheck.BackColor = SystemColors.Control;
+                    btnCheck.Text = "Force Full Download";
+                    labelPerc.Text = "Done";
+                    isPatching = false;
+                    isDone = true;
+                    isPatchForce = false;
             }
         }
 
@@ -633,8 +648,16 @@ namespace EQEmu_Patcher
             return "";
         }
 
-        public void DownloadFileUrl(string urlAddress, string location)
+        public void DownloadFileUrl(string urlAddress, string path)
         {
+            path = path.Replace("/", "\\");
+            if (path.Contains("\\"))
+            { //Make directory if needed.
+
+                string dir = Application.StartupPath + "\\" + path.Substring(0, path.LastIndexOf("\\"));
+                Directory.CreateDirectory(dir);
+            }
+
             using (webClient = new WebClient())
             {
                 webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(Completed);
@@ -649,7 +672,7 @@ namespace EQEmu_Patcher
                 try
                 {
                     // Start downloading the file
-                    webClient.DownloadFileAsync(URL, location);
+                    webClient.DownloadFileAsync(URL, path);
                 }
                 catch (Exception ex)
                 {
@@ -664,7 +687,7 @@ namespace EQEmu_Patcher
             reciveBytes = e.BytesReceived;
 
             // Calculate download speed and output it to labelSpeed.
-            labelSpeed.Text = string.Format("{0} kb/s", ((double)(curBytes + reciveBytes) / 1024d / sw.Elapsed.TotalSeconds).ToString("0.00"));
+            labelSpeed.Text = string.Format("{0} kb/s", ((double)(reciveBytes) / 1024d / sw.Elapsed.TotalSeconds).ToString("0"));
 
             // Update the progressbar percentage only when the value is not the same.
             //curBytes += entry.size
@@ -673,7 +696,9 @@ namespace EQEmu_Patcher
             progressBar.Value = (int)((100d / totalBytes) * (curBytes + reciveBytes));
 
             // Show the percentage on our label.
-            labelPerc.Text = e.ProgressPercentage.ToString() + "%";
+            //labelPerc.Text = e.ProgressPercentage.ToString() + "%";
+            labelPerc.Text = (int)((100d / totalBytes) * (curBytes + reciveBytes)) + "%";
+
 
             // Update the label with how much data have been downloaded so far and the total size of the file we are currently downloading
             labelDownloaded.Text = string.Format("{0} / {1} MB",
@@ -685,6 +710,21 @@ namespace EQEmu_Patcher
         // The event that will trigger when the WebClient is completed
         private void Completed(object sender, AsyncCompletedEventArgs e)
         {
+            if (e.Error != null)
+            {
+                LogEvent("Patching file error.");
+                labelPerc.Text = "Patching error";
+
+                string error = e.Error.ToString();
+                // or
+                // error = "Your error message here";
+
+                isError = true;
+
+                MessageBox.Show(error);
+                return;
+            }
+
             // Reset the stopwatch.
             sw.Reset();
 
@@ -692,26 +732,30 @@ namespace EQEmu_Patcher
             {
                 //MessageBox.Show("Download has been canceled.");
                 LogEvent("Patching cancelled.");
+                labelPerc.Text = "Patching cancelled";
+                isPatching = false;
+                isCancelled = true;
+                MessageBox.Show("Download has been canceled.");
             }
             else
             {
                 isAsyncDone = true;
                 curBytes = curBytes + reciveBytes;
                 // MessageBox.Show("Download completed!");
-            }
 
-            if (totalBytes == curBytes)
-            {
-                progressBar.Value = progressBar.Maximum;
-                LogEvent("Complete! Press Play to begin.");
-                IniLibrary.instance.LastPatchedVersion = filelist.version;
-                IniLibrary.Save();
-                btnCheck.BackColor = SystemColors.Control;
-                btnCheck.Text = "Force Full Download";
-                labelPerc.Text = "Done";
-                isPatching = false;
-                isDone = true;
-                isPatchForce = false;
+/*                if (totalBytes == curBytes)
+                {
+                    progressBar.Value = progressBar.Maximum;
+                    LogEvent("Complete! Press Play to begin.");
+                    IniLibrary.instance.LastPatchedVersion = filelist.version;
+                    IniLibrary.Save();
+                    btnCheck.BackColor = SystemColors.Control;
+                    btnCheck.Text = "Force Full Download";
+                    labelPerc.Text = "Done";
+                    // isPatching = false;
+                    isDone = true;
+                    isPatchForce = false;
+                }*/
             }
         }
 
