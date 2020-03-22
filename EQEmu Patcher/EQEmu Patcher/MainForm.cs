@@ -434,6 +434,7 @@ namespace EQEmu_Patcher
         long curBytes = 0;
         long reciveBytes = 0;
         long totalBytes = 0;
+        int recivePercentage = 0;
 
         public object Keyboard { get; private set; }
 
@@ -693,11 +694,14 @@ namespace EQEmu_Patcher
             //curBytes += entry.size
 
             //progressBar.Value = e.ProgressPercentage;
-            progressBar.Value = (int)((100d / totalBytes) * (curBytes + reciveBytes));
+            recivePercentage = (int)((100d / totalBytes) * (curBytes + reciveBytes));
+            if (recivePercentage > 100) { recivePercentage = 100; }
+
+            progressBar.Value = recivePercentage;
 
             // Show the percentage on our label.
             //labelPerc.Text = e.ProgressPercentage.ToString() + "%";
-            labelPerc.Text = (int)((100d / totalBytes) * (curBytes + reciveBytes)) + "%";
+            labelPerc.Text = recivePercentage + "%";
 
 
             // Update the label with how much data have been downloaded so far and the total size of the file we are currently downloading
